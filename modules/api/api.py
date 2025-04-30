@@ -603,6 +603,7 @@ class Api:
 
 
 
+
     def extras_single_image_api(self, req: models.ExtrasSingleImageRequest):
         reqDict = setUpscalers(req)
 
