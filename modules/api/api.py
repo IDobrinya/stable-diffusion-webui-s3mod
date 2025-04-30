@@ -490,11 +490,16 @@ class Api:
         return models.TextToImageResponse(images=b64images, parameters=vars(txt2imgreq), info=processed.js())
 
     def img2imgapi(self, img2imgreq: models.StableDiffusionImg2ImgProcessingAPI):
+        from modules.env_to_yaml import get_env_var
+        from modules.s3 import s3_client
+        from modules.download_from_s3 import get_photo_base64
+
         task_id = img2imgreq.force_task_id or create_task_id("img2img")
 
-        init_images = img2imgreq.init_images
-        if init_images is None:
+
+        if img2imgreq.init_images is None:
             raise HTTPException(status_code=404, detail="Init image not found")
+        init_images = [get_photo_base64(s3_url=img2imgreq.init_images)]
 
         mask = img2imgreq.mask
         if mask:
@@ -562,7 +567,42 @@ class Api:
             img2imgreq.init_images = None
             img2imgreq.mask = None
 
-        return models.ImageToImageResponse(images=b64images, parameters=vars(img2imgreq), info=processed.js())
+        import uuid
+
+        b64_string = b64images[0].decode("utf-8")
+        image_bytes = base64.b64decode(b64_string)
+
+        uid_int = uuid.uuid4().int
+
+        filename = str(uid_int)[0:18]
+        folder = "ddcn_results"
+
+        retry = 0
+
+        while retry <= 5:
+
+            try:
+                s3_client.put_object(
+                    Bucket=get_env_var(key="S3_BUCKET"),
+                    Key=f"{folder}/{filename}.jpg",
+                    Body=image_bytes,
+                    ContentType="image/jpeg"
+                )
+                s3_url = f"{get_env_var('S3_ENDPOINT')}/{get_env_var('S3_BUCKET')}/{folder}/{filename}.jpg"
+                return models.ImageToImageResponse(parameters=vars(img2imgreq), info=processed.js(), s3_url=s3_url)
+
+            except Exception as e:
+                print(f"Error save on s3: {e}")
+                retry =+ 1
+                continue
+
+        else:
+            raise HTTPException(status_code=500, detail="Error save on s3:")
+
+
+
+
+
 
     def extras_single_image_api(self, req: models.ExtrasSingleImageRequest):
         reqDict = setUpscalers(req)
@@ -925,4 +965,3 @@ class Api:
     def stop_webui(request):
         shared.state.server_command = "stop"
         return Response("Stopping.")
-
