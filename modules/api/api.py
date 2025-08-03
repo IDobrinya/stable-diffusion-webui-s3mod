@@ -32,6 +32,9 @@ import piexif
 import piexif.helper
 from contextlib import closing
 from modules.progress import create_task_id, add_task_to_queue, start_task, finish_task, current_task
+from modules.env_to_yaml import get_env_var
+from modules.s3 import s3_client
+from modules.download_from_s3 import get_photo_base64
 
 def script_name_to_index(name, scripts):
     try:
@@ -490,12 +493,7 @@ class Api:
         return models.TextToImageResponse(images=b64images, parameters=vars(txt2imgreq), info=processed.js())
 
     def img2imgapi(self, img2imgreq: models.StableDiffusionImg2ImgProcessingAPI):
-        from modules.env_to_yaml import get_env_var
-        from modules.s3 import s3_client
-        from modules.download_from_s3 import get_photo_base64
-
         task_id = img2imgreq.force_task_id or create_task_id("img2img")
-
 
         if img2imgreq.init_images is None:
             raise HTTPException(status_code=404, detail="Init image not found")
