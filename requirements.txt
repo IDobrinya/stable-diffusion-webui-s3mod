@@ -13,12 +13,11 @@ gradio==3.41.2
 inflection
 jsonmerge
 kornia
-urllib
 lark
 numpy
 omegaconf
 open-clip-torch
-dotenv
+python-dotenv
 piexif
 protobuf==3.20.0
 psutil
