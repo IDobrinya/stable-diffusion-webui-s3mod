@@ -595,7 +595,7 @@ class Api:
                 continue
 
         else:
-            raise HTTPException(status_code=500, detail="Error save on s3:")
+            raise HTTPException(status_code=500, detail="Error save on s3: ")
 
 
 
